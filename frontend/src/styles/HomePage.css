@@ -1,0 +1,156 @@
+body,
+html {
+  margin: 0;
+  padding: 0;
+  font-family: "Poppins", sans-serif;
+  background: #f7faff;
+  color: #222;
+}
+
+/* Hero Section */
+.hero {
+  background: linear-gradient(rgba(12, 43, 89, 0.6), rgba(12, 43, 89, 0.6)),
+    url("https://images.unsplash.com/photo-1604480132736-44c188fe4d20?q=80&w=1290&auto=format&fit=crop")
+      center/cover no-repeat;
+  height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #f1f1f1;
+  animation: fadeIn 1s ease-in-out;
+}
+
+.hero-content {
+  max-width: 600px;
+  padding: 20px;
+}
+
+.hero-content h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+
+.hero-content p {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  color: #e0e0e0;
+}
+
+.shop-btn {
+  display: inline-block;
+  padding: 12px 30px;
+  background: #1b74e4;
+  color: #fff;
+  font-size: 1rem;
+  border-radius: 30px;
+  text-decoration: none;
+  transition: 0.3s ease;
+  box-shadow: 0 4px 10px rgba(27, 116, 228, 0.4);
+}
+
+.shop-btn:hover {
+  background: #155bb8;
+  transform: translateY(-2px);
+}
+
+/* Trust Banner */
+.trust-banner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  background: #e8f3ff;
+  padding: 1.5rem 2rem;
+  flex-wrap: wrap;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #113c75;
+  font-weight: 500;
+}
+
+.trust-item i {
+  font-size: 1.4rem;
+  color: #1b74e4;
+}
+
+/* Categories Section */
+.categories {
+  padding: 4rem 2rem;
+  text-align: center;
+  background: #fff;
+}
+
+.categories h2 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  font-weight: 600;
+  color: #113c75;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem;
+}
+
+.category-card {
+  background: #f8fbff;
+  border-radius: 15px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: 0.3s ease;
+  cursor: pointer;
+}
+
+.category-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.category-card img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  transition: transform 0.4s ease;
+}
+
+.category-card:hover img {
+  transform: scale(1.08);
+}
+
+.category-card h3 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+  .hero-content p {
+    font-size: 1rem;
+  }
+}

@@ -1,0 +1,79 @@
+/* Main Page Container */
+.appliances-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
+  background: #fdfaff;
+}
+
+/* Hero Section */
+.appliances-hero {
+  text-align: center;
+  padding: 50px 20px;
+  margin-bottom: 40px;
+  background: linear-gradient(135deg, #e9dcff, #f7f2ff);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(106, 13, 173, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.appliances-hero::after {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  background: rgba(106, 13, 173, 0.08);
+  border-radius: 50%;
+  top: -50px;
+  right: -50px;
+}
+
+.appliances-title {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+  font-weight: 700;
+  color: #4b0082;
+}
+
+.appliances-subtitle {
+  font-size: 1rem;
+  color: #555;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Category Container */
+.appliances-category-container {
+  margin-top: 30px;
+  padding: 0 10px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .appliances-hero {
+    padding: 35px 15px;
+  }
+
+  .appliances-title {
+    font-size: 2rem;
+  }
+
+  .appliances-subtitle {
+    font-size: 0.95rem;
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .appliances-title {
+    font-size: 1.6rem;
+  }
+
+  .appliances-subtitle {
+    font-size: 0.9rem;
+  }
+}
