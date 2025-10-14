@@ -4,6 +4,7 @@ import pool from "./db.js";
 import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
 import dotenv from "dotenv";
+import { upload, cloudinary } from "./cloudinaryConfig.js";
 
 dotenv.config();
 
@@ -141,16 +142,20 @@ app.get("/products/category/:category", async (req, res) => {
   }
 });
 
-// Add a new product
-app.post("/products", async (req, res) => {
-  const { name, price, image, category } = req.body;
+// Add a new product with Cloudinary image upload
+app.post("/products", upload.single("image"), async (req, res) => {
+  const { name, price, category } = req.body;
+  const image = req.file?.path; // Cloudinary URL
+  const public_id = req.file?.filename; // Cloudinary public_id
+
   if (!name || !price || !image || !category) {
     return res.status(400).json({ message: "All fields required" });
   }
+
   try {
     const result = await pool.query(
-      "INSERT INTO products (name, price, image, category) VALUES ($1, $2, $3, $4) RETURNING *",
-      [name, parseFloat(price), image, category]
+      "INSERT INTO products (name, price, image,public_id, category) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [name, parseFloat(price), image, public_id, category]
     );
     res.json({ message: "Product added", product: result.rows[0] });
   } catch (error) {
@@ -159,18 +164,39 @@ app.post("/products", async (req, res) => {
   }
 });
 
-// Update a product
-app.put("/products/:id", async (req, res) => {
+// Update a product (with optional new image)
+app.put("/products/:id", upload.single("image"), async (req, res) => {
   const { id } = req.params;
-  const { name, price, image, category } = req.body;
+  const { name, price, category } = req.body;
 
   try {
+    // Get the existing product
+    const existing = await pool.query("SELECT * FROM products WHERE id = $1", [
+      id,
+    ]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const oldProduct = existing.rows[0];
+    let image = oldProduct.image;
+    let public_id = oldProduct.public_id;
+
+    // If a new image was uploaded, replace it in Cloudinary
+    if (req.file) {
+      if (oldProduct.public_id) {
+        await cloudinary.uploader.destroy(oldProduct.public_id);
+      }
+      image = req.file.path; // new image URL
+      public_id = req.file.filename; // new public_id
+    }
+
     await pool.query(
-      "UPDATE products SET name = $1, price = $2, image = $3, category = $4 WHERE id = $5",
-      [name, price, image, category, id]
+      "UPDATE products SET name = $1, price = $2, image = $3, public_id = $4, category = $5 WHERE id = $6",
+      [name, parseFloat(price), image, public_id, category, id]
     );
 
-    res.json({ message: "Product updated" });
+    res.json({ message: "Product updated successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error updating product" });
@@ -182,9 +208,21 @@ app.delete("/products/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    await pool.query("DELETE FROM products WHERE id = $1", [id]);
+    // Fetch product to get Cloudinary ID before deleting
+    const existing = await pool.query("SELECT * FROM products WHERE id = $1", [
+      id,
+    ]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
 
-    res.json({ message: "Product deleted" });
+    const product = existing.rows[0];
+    if (product.public_id) {
+      await cloudinary.uploader.destroy(product.public_id);
+    }
+
+    await pool.query("DELETE FROM products WHERE id = $1", [id]);
+    res.json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error deleting product" });

@@ -33,25 +33,27 @@ function Admin() {
     fetchProducts();
   }, []);
 
-  // Handle form change
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Add product
+  const handleFileChange = (e) => {
+    setForm({ ...form, image: e.target.files[0] });
+  };
+
   const addProduct = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const formData = new FormData();
+      formData.append("name", form.name);
+      formData.append("price", form.price);
+      formData.append("category", form.category);
+      formData.append("image", form.image);
+
       const response = await fetch(`${API_BASE}/products`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          price: parseFloat(form.price),
-          image: form.image,
-          category: form.category,
-        }),
+        body: formData,
       });
       if (!response.ok) throw new Error("Failed to add product");
       setForm({ id: "", name: "", price: "", image: "", category: "" });
@@ -63,20 +65,21 @@ function Admin() {
     }
   };
 
-  // Update product
   const updateProduct = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const formData = new FormData();
+      formData.append("name", form.name);
+      formData.append("price", form.price);
+      formData.append("category", form.category);
+      if (form.image instanceof File) {
+        formData.append("image", form.image);
+      }
+
       const response = await fetch(`${API_BASE}/products/${form.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          price: form.price,
-          image: form.image,
-          category: form.category,
-        }),
+        body: formData,
       });
       if (!response.ok) throw new Error("Failed to update product");
       setForm({ id: "", name: "", price: "", image: "", category: "" });
@@ -89,19 +92,16 @@ function Admin() {
     }
   };
 
-  // Confirm delete
   const confirmDelete = (id, name) => {
     setProductToDelete({ id, name });
     setShowDeletePopup(true);
   };
 
-  // Cancel delete
   const cancelDelete = () => {
     setShowDeletePopup(false);
     setProductToDelete({ id: "", name: "" });
   };
 
-  // Delete product
   const deleteProduct = async () => {
     try {
       await fetch(`${API_BASE}/products/${productToDelete.id}`, {
@@ -116,7 +116,6 @@ function Admin() {
     }
   };
 
-  // Start edit mode
   const startEdit = (product) => {
     setForm(product);
     setIsEditing(true);
@@ -129,7 +128,6 @@ function Admin() {
         Manage your mental wellness products with ease 💜
       </p>
 
-      {/* Delete Confirmation Popup */}
       {showDeletePopup && (
         <div className="popup-overlay">
           <div className="confirmation-popup">
@@ -151,89 +149,121 @@ function Admin() {
 
       <form
         onSubmit={isEditing ? updateProduct : addProduct}
-        className="product-form"
+        className="product-form two-column-form"
       >
-        {isEditing && (
+        <div className="form-left">
+          {isEditing && (
+            <input
+              type="text"
+              name="id"
+              value={form.id}
+              disabled
+              className="form-input id-input"
+            />
+          )}
           <input
             type="text"
-            name="id"
-            value={form.id}
-            disabled
-            className="form-input id-input"
+            name="name"
+            placeholder="Product Name"
+            value={form.name}
+            onChange={handleChange}
+            className="form-input"
+            required
           />
-        )}
-        <input
-          type="text"
-          name="name"
-          placeholder="Product Name"
-          value={form.name}
-          onChange={handleChange}
-          className="form-input"
-          required
-        />
-        <input
-          type="number"
-          name="price"
-          placeholder="Price"
-          value={form.price}
-          onChange={handleChange}
-          className="form-input"
-          required
-          min="0"
-          step="0.01"
-        />
-        <input
-          type="url"
-          name="image"
-          placeholder="Image URL"
-          value={form.image}
-          onChange={handleChange}
-          className="form-input"
-          required
-        />
-        <select
-          name="category"
-          value={form.category || ""}
-          onChange={handleChange}
-          className="form-input"
-          required
-        >
-          <option value="">Select Category</option>
-          <option value="antidepressants">Antidepressants</option>
-          <option value="antiAnxiety">Anti-Anxiety</option>
-          <option value="moodStabilizers">Mood Stabilizers</option>
-          <option value="antipsychotics">Antipsychotics</option>
-          <option value="sleepRelaxationAids">Sleep & Relaxation Aids</option>
-          <option value="cognitiveFocusEnhancers">
-            Cognitive & Focus Enhancers
-          </option>
-          <option value="naturalHerbalMentalWellness">
-            Natural & Herbal Mental Wellness
-          </option>
-          <option value="vitaminsNutritionalSupport">
-            Vitamins & Nutritional Support
-          </option>
-        </select>
-
-        <button
-          type="submit"
-          className="form-button primary"
-          disabled={loading}
-        >
-          {loading ? "Saving..." : isEditing ? "Update" : "Add"} Product
-        </button>
-        {isEditing && (
-          <button
-            type="button"
-            onClick={() => {
-              setIsEditing(false);
-              setForm({ id: "", name: "", price: "", image: "", category: "" });
-            }}
-            className="form-button secondary"
+          <input
+            type="number"
+            name="price"
+            placeholder="Price"
+            value={form.price}
+            onChange={handleChange}
+            className="form-input"
+            required
+            min="0"
+            step="0.01"
+          />
+          <select
+            name="category"
+            value={form.category || ""}
+            onChange={handleChange}
+            className="form-input"
+            required
           >
-            Cancel
+            <option value="">Select Category</option>
+            <option value="antidepressants">Antidepressants</option>
+            <option value="antiAnxiety">Anti-Anxiety</option>
+            <option value="moodStabilizers">Mood Stabilizers</option>
+            <option value="antipsychotics">Antipsychotics</option>
+            <option value="sleepRelaxationAids">Sleep & Relaxation Aids</option>
+            <option value="cognitiveFocusEnhancers">
+              Cognitive & Focus Enhancers
+            </option>
+            <option value="naturalHerbalMentalWellness">
+              Natural & Herbal Mental Wellness
+            </option>
+            <option value="vitaminsNutritionalSupport">
+              Vitamins & Nutritional Support
+            </option>
+          </select>
+        </div>
+
+        <div className="form-right">
+          <div className="file-input-wrapper">
+            <input
+              type="file"
+              name="image"
+              placeholder="image/*"
+              onChange={handleFileChange}
+              className="form-input"
+              required
+            />
+            {form.image && (
+              <div className="current-image">
+                <p className="current-image-label">
+                  {form.image instanceof File
+                    ? "New Image Preview:"
+                    : "Current Image:"}
+                </p>
+                <img
+                  src={
+                    form.image instanceof File
+                      ? URL.createObjectURL(form.image)
+                      : form.image
+                  }
+                  alt={form.name || "Product"}
+                  className="current-image-preview"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="form-actions">
+          <button
+            type="submit"
+            className="form-button primary"
+            disabled={loading}
+          >
+            {loading ? "Saving..." : isEditing ? "Update" : "Add"} Product
           </button>
-        )}
+          {isEditing && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditing(false);
+                setForm({
+                  id: "",
+                  name: "",
+                  price: "",
+                  image: "",
+                  category: "",
+                });
+              }}
+              className="form-button secondary"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
 
       <div className="products-table-container">
