@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../styles/ProductShowcasePage.css";
 import { Link } from "react-router-dom";
+import BuyNowButton from "./BuyNowButton";
 
 function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -109,6 +110,7 @@ function ProductsPage() {
                 <button onClick={() => addToCart(product.id)}>
                   Add to Cart
                 </button>
+                <BuyNowButton productId={product.id} apiBase={API_BASE} />
               </div>
             ))
           )}

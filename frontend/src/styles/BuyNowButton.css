@@ -1,0 +1,16 @@
+.buy-now-btn {
+    background-color: #ff6600;
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    cursor: pointer;
+    margin-top: 6px;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: 0.2s;
+  }
+  
+  .buy-now-btn:hover {
+    background-color: #e55a00;
+  }
+  
