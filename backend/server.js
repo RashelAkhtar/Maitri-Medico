@@ -12,11 +12,22 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 
 // Allow requests from frontend
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173"
+];
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      return callback(new Error("Not allowed by CORS"), false);
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true, // if sending cookies/auth headers
+    credentials: true,
   })
 );
 
