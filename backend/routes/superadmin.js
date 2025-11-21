@@ -4,6 +4,119 @@ import { upload, cloudinary } from "../cloudinaryConfig.js";
 
 const router = express.Router();
 
+/* --- Product management for SuperAdmin --- */
+
+/* GET /superadmin/products
+   returns all products */
+router.get("/products", async (req, res) => {
+  try {
+    const q = await pool.query("SELECT * FROM products ORDER BY id DESC");
+    res.json({ products: q.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching products" });
+  }
+});
+
+/* POST /superadmin/products
+   multipart/form-data: name, price, category, image (file) */
+router.post("/products", upload.single("image"), async (req, res) => {
+  try {
+    const { name, price, category } = req.body;
+    let image = null;
+    let public_id = null;
+
+    if (req.file && req.file.path) {
+      // cloudinary upload already done by middleware if you configured that way;
+      // if upload middleware returns file info here, adapt accordingly.
+      // If upload stores file locally we upload to cloudinary here:
+      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+        folder: "maitri_medico_products",
+      });
+      image = uploadResult.secure_url;
+      public_id = uploadResult.public_id;
+    }
+
+    const q = await pool.query(
+      "INSERT INTO products (name, price, image, public_id, category) VALUES ($1,$2,$3,$4,$5) RETURNING *",
+      [name, parseFloat(price), image, public_id, category]
+    );
+
+    res.status(201).json({ product: q.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error creating product" });
+  }
+});
+
+/* PUT /superadmin/products/:id
+   optional multipart/form-data: name, price, category, image (file) */
+router.put("/products/:id", upload.single("image"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, price, category } = req.body;
+
+    const existing = await pool.query("SELECT * FROM products WHERE id=$1", [id]);
+    if (existing.rows.length === 0) return res.status(404).json({ message: "Product not found" });
+    const old = existing.rows[0];
+
+    let image = old.image;
+    let public_id = old.public_id;
+
+    if (req.file && req.file.path) {
+      // upload new image
+      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+        folder: "maitri_medico_products",
+      });
+      // delete old image if exists
+      if (public_id) {
+        try {
+          await cloudinary.uploader.destroy(public_id);
+        } catch (e) {
+          console.warn("Failed to delete old image", e);
+        }
+      }
+      image = uploadResult.secure_url;
+      public_id = uploadResult.public_id;
+    }
+
+    await pool.query(
+      "UPDATE products SET name=$1, price=$2, image=$3, public_id=$4, category=$5 WHERE id=$6",
+      [name ?? old.name, price ? parseFloat(price) : old.price, image, public_id, category ?? old.category, id]
+    );
+
+    const updated = await pool.query("SELECT * FROM products WHERE id=$1", [id]);
+    res.json({ product: updated.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error updating product" });
+  }
+});
+
+/* DELETE /superadmin/products/:id */
+router.delete("/products/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await pool.query("SELECT * FROM products WHERE id=$1", [id]);
+    if (existing.rows.length === 0) return res.status(404).json({ message: "Product not found" });
+    const p = existing.rows[0];
+
+    if (p.public_id) {
+      try {
+        await cloudinary.uploader.destroy(p.public_id);
+      } catch (e) {
+        console.warn("Failed to delete image from Cloudinary", e);
+      }
+    }
+
+    await pool.query("DELETE FROM products WHERE id=$1", [id]);
+    res.json({ message: "Product deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error deleting product" });
+  }
+});
+
 /* ------------------------------------------------------
    ADMIN — SUBMIT ADD REQUEST
 ------------------------------------------------------ */

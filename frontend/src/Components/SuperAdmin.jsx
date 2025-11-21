@@ -1,133 +1,148 @@
 // src/Components/SuperAdmin.jsx
 import React, { useEffect, useState } from "react";
-import "../styles/SuperAdmin.css";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
-function SuperAdmin() {
-  const [pending, setPending] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function SuperAdmin() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  /** Fetch all pending requests */
-  const fetchPending = async () => {
+  // add / edit form state
+  const [form, setForm] = useState({ name: "", price: "", category: "" });
+  const [file, setFile] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/superadmin/requests/pending`);
+      const res = await fetch(`${API_BASE}/superadmin/products`);
       const data = await res.json();
-      setPending(data.requests || []);
+      setProducts(data.products || []);
     } catch (err) {
-      console.error("Error fetching pending requests", err);
+      console.error("Failed to fetch products", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const approveRequest = async (id) => {
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleFile = (e) => setFile(e.target.files[0]);
+
+  const submitAdd = async (e) => {
+    e.preventDefault();
+    const fd = new FormData();
+    fd.append("name", form.name);
+    fd.append("price", form.price);
+    fd.append("category", form.category);
+    if (file) fd.append("image", file);
+
     try {
-      await fetch(`${API_BASE}/superadmin/approve/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+      await fetch(`${API_BASE}/superadmin/products`, {
+        method: "POST",
+        body: fd,
       });
-      fetchPending();
+      setForm({ name: "", price: "", category: "" });
+      setFile(null);
+      fetchProducts();
     } catch (err) {
-      console.error("Error approving request", err);
+      console.error("Add failed", err);
     }
   };
 
-  const rejectRequest = async (id) => {
+  const startEdit = (p) => {
+    setEditingId(p.id);
+    setForm({ name: p.name || "", price: String(p.price || ""), category: p.category || "" });
+    setFile(null);
+  };
+
+  const submitUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingId) return;
+    const fd = new FormData();
+    fd.append("name", form.name);
+    fd.append("price", form.price);
+    fd.append("category", form.category);
+    if (file) fd.append("image", file);
+
     try {
-      await fetch(`${API_BASE}/superadmin/reject/${id}`, {
+      await fetch(`${API_BASE}/superadmin/products/${editingId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        body: fd,
       });
-      fetchPending();
+      setEditingId(null);
+      setForm({ name: "", price: "", category: "" });
+      setFile(null);
+      fetchProducts();
     } catch (err) {
-      console.error("Error rejecting request", err);
+      console.error("Update failed", err);
     }
   };
 
-  useEffect(() => {
-    fetchPending();
-  }, []);
+  const deleteProduct = async (id) => {
+    if (!window.confirm("Delete product?")) return;
+    try {
+      await fetch(`${API_BASE}/superadmin/products/${id}`, { method: "DELETE" });
+      fetchProducts();
+    } catch (err) {
+      console.error("Delete failed", err);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm({ name: "", price: "", category: "" });
+    setFile(null);
+  };
 
   return (
-    <div className="super-admin-container">
-      <h1>Super Admin — Pending Product Requests</h1>
+    <div className="superadmin">
+      <h2>Products</h2>
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : pending.length === 0 ? (
-        <p>No pending requests</p>
-      ) : (
-        <div className="requests-list">
-          {pending.map((r) => {
-            const pd = r.product_data || {};
-            return (
-              <div className="request-card" key={r.id}>
-                <div className="left">
-                  <h3>{pd.name || "Unnamed Product"}</h3>
+      {/* Add / Edit form */}
+      <form onSubmit={editingId ? submitUpdate : submitAdd} style={{ marginBottom: 20 }}>
+        <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required />
+        <input name="price" placeholder="Price" value={form.price} onChange={handleChange} required />
+        <input name="category" placeholder="Category" value={form.category} onChange={handleChange} required />
+        <input type="file" accept="image/*" onChange={handleFile} />
+        <button type="submit">{editingId ? "Update" : "Add"}</button>
+        {editingId && <button type="button" onClick={cancelEdit}>Cancel</button>}
+      </form>
 
-                  <p>
-                    <strong>Type:</strong> {r.request_type}
-                  </p>
-
-                  <p>
-                    <strong>By:</strong> {r.admin_name}
-                  </p>
-
-                  <p>
-                    <strong>Price:</strong> {pd.price || "--"}
-                  </p>
-
-                  <p>
-                    <strong>Category:</strong> {pd.category || "--"}
-                  </p>
-
-                  <p>
-                    <strong>Created:</strong>{" "}
-                    {new Date(r.created_at).toLocaleString()}
-                  </p>
-                </div>
-
-                {/* Image */}
-                <div className="middle">
-                  {pd.image ? (
-                    <img
-                      src={pd.image}
-                      alt={pd.name}
-                      style={{ maxWidth: 150 }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 150,
-                        height: 100,
-                        background: "#eee",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
-                      No Image
-                    </div>
-                  )}
-                </div>
-
-                <div className="right">
-                  <button className="approve" onClick={() => approveRequest(r.id)}>
-                    Approve
-                  </button>
-                  <button className="reject" onClick={() => rejectRequest(r.id)}>
-                    Reject
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {loading ? <div>Loading...</div> : (
+        <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Image</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Category</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.length === 0 && <tr><td colSpan="6">No products</td></tr>}
+            {products.map((p) => (
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td>{p.image ? <img src={p.image} alt={p.name} style={{ width: 60 }} /> : "—"}</td>
+                <td>{p.name}</td>
+                <td>{p.price}</td>
+                <td>{p.category}</td>
+                <td>
+                  <button onClick={() => startEdit(p)}>Edit</button>
+                  <button onClick={() => deleteProduct(p.id)}>Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
+
     </div>
   );
 }
-
-export default SuperAdmin;
