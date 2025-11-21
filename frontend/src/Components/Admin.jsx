@@ -21,7 +21,7 @@ function Admin() {
 
   const fetchRequests = async () => {
     try {
-      const res = await fetch(`${API_BASE}/requests?admin_name=${encodeURIComponent(adminName)}`);
+      const res = await fetch(`${API_BASE}/admin/requests`);
       const data = await res.json();
       // data.requests is expected
       setRequests(data.requests || []);
@@ -44,23 +44,28 @@ function Admin() {
   const submitRequest = async (e) => {
     e.preventDefault();
     setLoading(true);
+  
     try {
       const formData = new FormData();
       formData.append("admin_name", adminName);
-      formData.append("request_type", isEditing ? "update" : "add");
-      if (isEditing && form.id) formData.append("product_id", form.id);
       formData.append("name", form.name);
       formData.append("price", form.price);
       formData.append("category", form.category);
       if (form.image) formData.append("image", form.image);
-
-      // POST to /requests (your backend request.js POST /)
-      const url = `${API_BASE}/requests`;
+  
+      let url = "";
+  
+      if (isEditing) {
+        url = `${API_BASE}/admin/request/update/${form.id}`;
+      } else {
+        url = `${API_BASE}/admin/request/add`;
+      }
+  
       await fetch(url, {
         method: "POST",
         body: formData,
       });
-
+  
       setForm({ id: "", name: "", price: "", image: null, category: "" });
       setIsEditing(false);
       fetchRequests();
@@ -69,7 +74,7 @@ function Admin() {
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   const prepareEdit = (r) => {
     // r.product_data has stored values
@@ -86,16 +91,16 @@ function Admin() {
 
   const withdrawRequest = async (id) => {
     try {
-      await fetch(`${API_BASE}/requests/cancel/${id}`, {
-        method: "PUT",
+      await fetch(`${API_BASE}/admin/request/cancel/${id}`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ admin_name: adminName }), // backend should verify owner
+        body: JSON.stringify({ admin_name: adminName }),
       });
       fetchRequests();
     } catch (err) {
       console.error("Error cancelling request", err);
     }
-  };
+  };  
 
   return (
     <div className="admin-container">

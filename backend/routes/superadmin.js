@@ -1,137 +1,186 @@
 import express from "express";
 import pool from "../db.js";
-import { cloudinary } from "../cloudinaryConfig.js";
+import { upload, cloudinary } from "../cloudinaryConfig.js";
 
 const router = express.Router();
 
 /* ------------------------------------------------------
-   SUPER ADMIN — VIEW ALL PENDING REQUESTS
+   ADMIN — SUBMIT ADD REQUEST
+------------------------------------------------------ */
+router.post("/request/add", upload.single("image"), async (req, res) => {
+  try {
+    const { name, price, category } = req.body;
+    const admin_name = req.body.admin_name || "admin";
+
+    let image_url = null;
+    let public_id = null;
+
+    if (req.file) {
+      image_url = req.file.path;
+      public_id = req.file.filename;
+    }
+
+    const productData = {
+      name,
+      price,
+      category,
+      image: image_url,
+      public_id,
+    };
+
+    const q = await pool.query(
+      `INSERT INTO product_requests (admin_name, request_type, product_data)
+       VALUES ($1, 'add', $2) RETURNING *`,
+      [admin_name, productData]
+    );
+
+    res.json({ message: "Add Request Submitted 🎯", request: q.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error submitting add request" });
+  }
+});
+
+/* ------------------------------------------------------
+   ADMIN — SUBMIT UPDATE REQUEST
+------------------------------------------------------ */
+router.post("/request/update/:id", upload.single("image"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const admin_name = req.body.admin_name || "admin";
+    const { name, price, category } = req.body;
+
+    const product = await pool.query("SELECT * FROM products WHERE id=$1", [
+      id,
+    ]);
+
+    if (product.rows.length === 0)
+      return res.status(404).json({ message: "Product not found" });
+
+    const existing = product.rows[0];
+
+    let image_url = existing.image;
+    let public_id = existing.public_id;
+
+    if (req.file) {
+      image_url = req.file.path;
+      public_id = req.file.filename;
+    }
+
+    const productData = {
+      id,
+      name,
+      price,
+      category,
+      image: image_url,
+      public_id,
+    };
+
+    const q = await pool.query(
+      `INSERT INTO product_requests (admin_name, request_type, product_id, product_data)
+       VALUES ($1, 'update', $2, $3) RETURNING *`,
+      [admin_name, id, productData]
+    );
+
+    res.json({ message: "Update Request Submitted 🎯", request: q.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error submitting update request" });
+  }
+});
+
+/* ------------------------------------------------------
+   ADMIN — SUBMIT DELETE REQUEST
+------------------------------------------------------ */
+router.post("/request/delete/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const admin_name = req.body.admin_name || "admin";
+
+    const product = await pool.query("SELECT * FROM products WHERE id=$1", [
+      id,
+    ]);
+
+    if (product.rows.length === 0)
+      return res.status(404).json({ message: "Product not found" });
+
+    const existing = product.rows[0];
+
+    const productData = {
+      id,
+      name: existing.name,
+      price: existing.price,
+      category: existing.category,
+      image: existing.image,
+      public_id: existing.public_id,
+    };
+
+    const q = await pool.query(
+      `INSERT INTO product_requests (admin_name, request_type, product_id, product_data)
+       VALUES ($1, 'delete', $2, $3) RETURNING *`,
+      [admin_name, id, productData]
+    );
+
+    res.json({ message: "Delete Request Submitted ❗", request: q.rows[0] });
+  } catch (err) {
+    res.status(500).json({ message: "Error submitting delete request" });
+  }
+});
+
+/* ------------------------------------------------------
+   ADMIN — VIEW OWN REQUESTS
 ------------------------------------------------------ */
 router.get("/requests", async (req, res) => {
   try {
     const q = await pool.query(
-      `SELECT * FROM product_requests WHERE status='pending' ORDER BY created_at DESC`
+      `SELECT * FROM product_requests ORDER BY created_at DESC`
     );
 
     res.json({ requests: q.rows });
   } catch (err) {
-    res.status(500).json({ message: "Error fetching pending requests" });
+    res.status(500).json({ message: "Error fetching requests" });
   }
 });
 
 /* ------------------------------------------------------
-   SUPER ADMIN — APPROVE REQUEST
+   ADMIN — CANCEL REQUEST
 ------------------------------------------------------ */
-router.post("/approve/:id", async (req, res) => {
+router.post("/request/cancel/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const q = await pool.query(
-      "SELECT * FROM product_requests WHERE id=$1",
-      [id]
-    );
+    const q = await pool.query("SELECT * FROM product_requests WHERE id=$1", [
+      id,
+    ]);
     if (q.rows.length === 0)
       return res.status(404).json({ message: "Request not found" });
 
-    const request = q.rows[0];
-    const data = request.product_data;
+    const reqData = q.rows[0];
 
-    if (request.request_type === "add") {
-      await pool.query(
-        `INSERT INTO products (name, price, category, image, public_id)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [data.name, data.price, data.category, data.image, data.public_id]
-      );
-    }
+    if (reqData.status !== "pending")
+      return res
+        .status(400)
+        .json({ message: "Only pending requests can be cancelled" });
 
-    if (request.request_type === "update") {
-      // Delete old image if new one uploaded
-      const oldProduct = await pool.query(
-        "SELECT * FROM products WHERE id=$1",
-        [data.id]
-      );
+    const pd = reqData.product_data;
 
-      const old = oldProduct.rows[0];
-      if (old.public_id && old.public_id !== data.public_id) {
-        await cloudinary.uploader.destroy(old.public_id);
+    // Delete Cloudinary image if it was uploaded for request
+    if (pd.public_id) {
+      try {
+        await cloudinary.uploader.destroy(pd.public_id);
+      } catch (err) {
+        console.warn("Cloudinary cleanup failed", err);
       }
-
-      await pool.query(
-        `UPDATE products
-           SET name=$1, price=$2, category=$3, image=$4, public_id=$5
-         WHERE id=$6`,
-        [
-          data.name,
-          data.price,
-          data.category,
-          data.image,
-          data.public_id,
-          data.id,
-        ]
-      );
-    }
-
-    if (request.request_type === "delete") {
-      const product = await pool.query(
-        "SELECT * FROM products WHERE id=$1",
-        [data.id]
-      );
-
-      if (product.rows.length > 0 && product.rows[0].public_id) {
-        await cloudinary.uploader.destroy(product.rows[0].public_id);
-      }
-
-      await pool.query("DELETE FROM products WHERE id=$1", [data.id]);
     }
 
     await pool.query(
-      "UPDATE product_requests SET status='approved' WHERE id=$1",
+      "UPDATE product_requests SET status='rejected' WHERE id=$1",
       [id]
     );
 
-    res.json({ message: "Request approved ✔" });
+    res.json({ message: "Request cancelled ❌" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error approving request" });
-  }
-});
-
-/* ------------------------------------------------------
-   SUPER ADMIN — REJECT REQUEST
------------------------------------------------------- */
-router.post("/reject/:id", async (req, res) => {
-  try {
-    await pool.query(
-      "UPDATE product_requests SET status='rejected' WHERE id=$1",
-      [req.params.id]
-    );
-
-    res.json({ message: "Request rejected ❌" });
-  } catch (err) {
-    res.status(500).json({ message: "Error rejecting request" });
-  }
-});
-
-/* ------------------------------------------------------
-   SUPER ADMIN — DASHBOARD STATS
------------------------------------------------------- */
-router.get("/stats", async (req, res) => {
-  try {
-    const products = await pool.query("SELECT COUNT(*) FROM products");
-    const categories = await pool.query(
-      "SELECT COUNT(DISTINCT category) FROM products"
-    );
-    const users = await pool.query("SELECT COUNT(*) FROM users");
-    const orders = await pool.query("SELECT COUNT(*) FROM orders");
-
-    res.json({
-      products: Number(products.rows[0].count),
-      categories: Number(categories.rows[0].count),
-      users: Number(users.rows[0].count),
-      orders: Number(orders.rows[0].count),
-    });
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching stats" });
+    res.status(500).json({ message: "Error cancelling request" });
   }
 });
 

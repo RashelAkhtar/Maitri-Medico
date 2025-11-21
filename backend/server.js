@@ -5,8 +5,11 @@ import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
 import dotenv from "dotenv";
 import { upload, cloudinary } from "./cloudinaryConfig.js";
-import superAdminRoutes from "./routes/superadmin.js";
-import requestRoutes from "./routes/requests.js";
+import adminRequestsRoutes from "./routes/adminRequests.js";
+import superAdminRoutes from "./routes/superAdmin.js";
+
+
+
 
 
 dotenv.config();
@@ -26,9 +29,8 @@ app.use(
 app.use(express.json());
 
 // Super Admin routes
+app.use("/admin", adminRequestsRoutes);
 app.use("/superadmin", superAdminRoutes);
-
-app.use("/requests", requestRoutes);
 
 
 /* ================== 🛒 CART API ================== */
