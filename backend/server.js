@@ -6,7 +6,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { upload, cloudinary } from "./cloudinaryConfig.js";
 import adminRequestsRoutes from "./routes/requests.js";
-import superAdminRoutes from "./routes/superAdmin.js";
+import superAdminRoutes from "./routes/superadmin.js";
 
 
 dotenv.config();
