@@ -31,6 +31,8 @@ app.use(
   })
 );
 
+app.use("/superadmin", require("./routes/superadmin.js"))
+
 app.use(express.json());
 
 /* ================== 🛒 CART API ================== */
