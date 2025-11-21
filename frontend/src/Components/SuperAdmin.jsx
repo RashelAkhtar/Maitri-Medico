@@ -12,7 +12,7 @@ function SuperAdmin() {
   const fetchPending = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/requests/pending`);
+      const res = await fetch(`${API_BASE}/superadmin/requests/pending`);
       const data = await res.json();
       setPending(data.requests || []);
     } catch (err) {
@@ -22,33 +22,33 @@ function SuperAdmin() {
     }
   };
 
-  useEffect(() => {
-    fetchPending();
-  }, []);
-
-  /** Approve request */
-  const approve = async (id) => {
+  const approveRequest = async (id) => {
     try {
       await fetch(`${API_BASE}/superadmin/approve/${id}`, {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
       });
       fetchPending();
     } catch (err) {
-      console.error("Approve error", err);
+      console.error("Error approving request", err);
     }
   };
 
-  /** Reject request */
-  const reject = async (id) => {
+  const rejectRequest = async (id) => {
     try {
       await fetch(`${API_BASE}/superadmin/reject/${id}`, {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
       });
       fetchPending();
     } catch (err) {
-      console.error("Reject error", err);
+      console.error("Error rejecting request", err);
     }
   };
+
+  useEffect(() => {
+    fetchPending();
+  }, []);
 
   return (
     <div className="super-admin-container">
@@ -114,10 +114,10 @@ function SuperAdmin() {
                 </div>
 
                 <div className="right">
-                  <button className="approve" onClick={() => approve(r.id)}>
+                  <button className="approve" onClick={() => approveRequest(r.id)}>
                     Approve
                   </button>
-                  <button className="reject" onClick={() => reject(r.id)}>
+                  <button className="reject" onClick={() => rejectRequest(r.id)}>
                     Reject
                   </button>
                 </div>

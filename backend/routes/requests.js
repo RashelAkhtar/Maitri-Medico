@@ -145,17 +145,11 @@ router.post("/request/delete/:id", async (req, res) => {
 router.get("/requests", async (req, res) => {
   try {
     const q = await pool.query(
-      `SELECT id AS request_id,
-              admin_name,
-              request_type AS action_type,
-              product_data->>'name' AS product_name,
-              status
-       FROM product_requests
-       ORDER BY created_at DESC`
+      `SELECT * FROM product_requests ORDER BY created_at DESC`
     );
-
     res.json({ requests: q.rows });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Error fetching requests" });
   }
 });

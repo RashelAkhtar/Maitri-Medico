@@ -40,7 +40,7 @@ function App() {
             element={<MoodStabilizers />}
           />
           <Route path="/products/antipsychotics" element={<Antipsychotics />} />
-          <Route path="/products/v" element={<SleepRelaxationAids />} />
+          <Route path="/products/sleepRelaxationAids" element={<SleepRelaxationAids />} />
           <Route
             path="/products/cognitiveFocusEnhancers"
             element={<CognitiveFocusEnhancers />}

@@ -152,7 +152,7 @@ function Admin() {
             <option value="antidepressants">Antidepressants</option>
             <option value="antiAnxiety">Anti-Anxiety</option>
             <option value="moodStabilizers">Mood Stabilizers</option>
-            <option value="antpsycotics">Antipsychotics</option>
+            <option value="antipsychotics">Antipsychotics</option>
             <option value="sleepRelaxationAids">Sleep & Relaxation Aids</option>
             <option value="cognitiveFocusEnhancers">
               Cognitive & Focus Enhancers
