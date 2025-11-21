@@ -10,20 +10,21 @@ function Admin() {
     id: "",
     name: "",
     price: "",
-    image: null,
     category: "",
+    image: null,
   });
+
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // admin name from your auth or localStorage (fallback)
+  // Admin name from localStorage or fallback
   const adminName = localStorage.getItem("adminName") || "admin";
 
+  /** Fetch admin’s own requests */
   const fetchRequests = async () => {
     try {
       const res = await fetch(`${API_BASE}/admin/requests`);
       const data = await res.json();
-      // data.requests is expected
       setRequests(data.requests || []);
     } catch (error) {
       console.error("Error fetching requests", error);
@@ -35,16 +36,16 @@ function Admin() {
   }, []);
 
   const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleFileChange = (e) =>
-    setForm({ ...form, image: e.target.files[0] });
+    setForm((prev) => ({ ...prev, image: e.target.files[0] }));
 
-  // Submit new add request
+  /** Submit Add or Update request */
   const submitRequest = async (e) => {
     e.preventDefault();
     setLoading(true);
-  
+
     try {
       const formData = new FormData();
       formData.append("admin_name", adminName);
@@ -52,43 +53,56 @@ function Admin() {
       formData.append("price", form.price);
       formData.append("category", form.category);
       if (form.image) formData.append("image", form.image);
-  
+
       let url = "";
-  
+
       if (isEditing) {
+        // UPDATE Request
         url = `${API_BASE}/admin/request/update/${form.id}`;
       } else {
+        // ADD Request
         url = `${API_BASE}/admin/request/add`;
       }
-  
+
       await fetch(url, {
         method: "POST",
         body: formData,
       });
-  
-      setForm({ id: "", name: "", price: "", image: null, category: "" });
+
+      // Reset form
+      setForm({
+        id: "",
+        name: "",
+        price: "",
+        category: "",
+        image: null,
+      });
       setIsEditing(false);
       fetchRequests();
     } catch (err) {
-      console.error(err);
+      console.error("Submit request error", err);
     } finally {
       setLoading(false);
     }
-  };  
+  };
 
-  const prepareEdit = (r) => {
-    // r.product_data has stored values
+  /** Prepare update request editing */
+  const prepareEdit = (req) => {
+    const pd = req.product_data || {};
+
     setIsEditing(true);
     setForm({
-      id: r.product_id || r.product_data?.id || "",
-      name: r.product_data?.name || "",
-      price: r.product_data?.price || "",
+      id: req.product_id || pd.id || "",
+      name: pd.name || "",
+      price: pd.price || "",
+      category: pd.category || "",
       image: null,
-      category: r.product_data?.category || "",
     });
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  /** Cancel request */
   const withdrawRequest = async (id) => {
     try {
       await fetch(`${API_BASE}/admin/request/cancel/${id}`, {
@@ -96,16 +110,18 @@ function Admin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ admin_name: adminName }),
       });
+
       fetchRequests();
     } catch (err) {
       console.error("Error cancelling request", err);
     }
-  };  
+  };
 
   return (
     <div className="admin-container">
-      <h1 className="admin-title">Admin: Product Requests</h1>
+      <h1 className="admin-title">Admin Dashboard — Product Requests</h1>
 
+      {/* --- FORM --- */}
       <form onSubmit={submitRequest} className="product-form two-column-form">
         <div>
           <input
@@ -116,6 +132,7 @@ function Admin() {
             onChange={handleChange}
             required
           />
+
           <input
             type="number"
             name="price"
@@ -124,6 +141,7 @@ function Admin() {
             onChange={handleChange}
             required
           />
+
           <select
             name="category"
             value={form.category}
@@ -134,11 +152,17 @@ function Admin() {
             <option value="antidepressants">Antidepressants</option>
             <option value="antiAnxiety">Anti-Anxiety</option>
             <option value="moodStabilizers">Mood Stabilizers</option>
-            <option value="antipsychotics">Antipsychotics</option>
+            <option value="antpsycotics">Antipsychotics</option>
             <option value="sleepRelaxationAids">Sleep & Relaxation Aids</option>
-            <option value="cognitiveFocusEnhancers">Cognitive & Focus Enhancers</option>
-            <option value="naturalHerbalMentalWellness">Natural & Herbal Mental Wellness</option>
-            <option value="vitaminsNutritionalSupport">Vitamins & Nutritional Support</option>
+            <option value="cognitiveFocusEnhancers">
+              Cognitive & Focus Enhancers
+            </option>
+            <option value="naturalHerbalMentalWellness">
+              Natural & Herbal Mental Wellness
+            </option>
+            <option value="vitaminsNutritionalSupport">
+              Vitamins & Nutritional Support
+            </option>
           </select>
         </div>
 
@@ -147,10 +171,15 @@ function Admin() {
         </div>
 
         <button className="form-button primary" disabled={loading}>
-          {isEditing ? "Submit Update Request" : "Submit Add Request"}
+          {loading
+            ? "Submitting..."
+            : isEditing
+            ? "Submit Update Request"
+            : "Submit Add Request"}
         </button>
       </form>
 
+      {/* --- REQUEST LIST --- */}
       <h2>Your Requests</h2>
 
       <table className="products-table">
@@ -158,26 +187,32 @@ function Admin() {
           <tr>
             <th>Req ID</th>
             <th>Name</th>
-            <th>Action</th>
+            <th>Type</th>
             <th>Status</th>
             <th>Created</th>
-            <th>Withdraw / Edit</th>
+            <th>Actions</th>
           </tr>
         </thead>
+
         <tbody>
           {requests.map((r) => (
             <tr key={r.id}>
               <td>{r.id}</td>
               <td>{r.product_data?.name || "-"}</td>
               <td>{r.request_type}</td>
-              <td className={`status-${r.status.toLowerCase()}`}>{r.status}</td>
+              <td className={`status-${r.status}`}>{r.status}</td>
               <td>{new Date(r.created_at).toLocaleString()}</td>
+
               <td>
                 {r.status === "pending" && (
                   <>
-                    <button className="cancel-btn" onClick={() => withdrawRequest(r.id)}>
+                    <button
+                      className="cancel-btn"
+                      onClick={() => withdrawRequest(r.id)}
+                    >
                       Cancel
                     </button>
+
                     <button className="edit-btn" onClick={() => prepareEdit(r)}>
                       Edit
                     </button>
@@ -186,9 +221,10 @@ function Admin() {
               </td>
             </tr>
           ))}
+
           {requests.length === 0 && (
             <tr>
-              <td colSpan="6">No requests yet</td>
+              <td colSpan="6">No requests found</td>
             </tr>
           )}
         </tbody>
