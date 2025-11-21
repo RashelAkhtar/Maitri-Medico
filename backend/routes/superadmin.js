@@ -1,6 +1,6 @@
 import express from "express";
 import pool from "../db.js";
-import { cloudinary } from "../cloudinaryConfig.js";
+import { upload, cloudinary } from "../cloudinaryConfig.js";
 
 const router = express.Router();
 
