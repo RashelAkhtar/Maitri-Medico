@@ -6,6 +6,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { upload, cloudinary } from "./cloudinaryConfig.js";
 import superAdminRoutes from "./routes/superadmin.js";
+import requestRoutes from "./routes/requests.js";
+
 
 dotenv.config();
 
@@ -25,6 +27,8 @@ app.use(express.json());
 
 // Super Admin routes
 app.use("/superadmin", superAdminRoutes);
+
+app.use("/requests", requestRoutes);
 
 
 /* ================== 🛒 CART API ================== */
