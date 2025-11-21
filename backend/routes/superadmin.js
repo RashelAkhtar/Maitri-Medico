@@ -1,6 +1,7 @@
 import express from "express";
 const router = express.Router();
-const db = require("../db"); // your database connection
+import db from "../db.js";
+
 
 router.get("/stats", async (req, res) => {
   try {
