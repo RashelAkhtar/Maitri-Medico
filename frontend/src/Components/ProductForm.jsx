@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from "react";
 
+const CATEGORIES = [
+  { value: "antiAnxiety", label: "Anti Anxiety" },
+  { value: "antidepressants", label: "Antidepressants" },
+  { value: "moodStabilizers", label: "Mood Stabilizers" },
+  { value: "antipsychotics", label: "Antipsychotics" },
+  { value: "sleepRelaxationAids", label: "Sleep & Relaxation Aids" },
+  { value: "cognitiveFocusEnhancers", label: "Cognitive / Focus Enhancers" },
+  { value: "naturalHerbalMentalWellness", label: "Natural / Herbal Mental Wellness" },
+  { value: "vitaminsNutritionalSupport", label: "Vitamins & Nutritional Support" },
+];
+
 export default function ProductForm({ initial = {}, submitLabel = "Save", onSubmit, onCancel }) {
   const [form, setForm] = useState({ name: "", price: "", category: "" });
   const [file, setFile] = useState(null);
@@ -39,7 +50,25 @@ export default function ProductForm({ initial = {}, submitLabel = "Save", onSubm
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required />
         <input name="price" placeholder="Price" value={form.price} onChange={handleChange} required />
-        <input name="category" placeholder="Category" value={form.category} onChange={handleChange} required />
+
+        {/* Category dropdown */}
+        <select
+          name="category"
+          value={form.category}
+          onChange={handleChange}
+          required
+          style={{ padding: "6px" }}
+        >
+          <option value="" disabled>
+            Select category
+          </option>
+          {CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+
         <input type="file" accept="image/*" onChange={handleFile} />
         <button type="submit">{submitLabel}</button>
         {onCancel && <button type="button" onClick={onCancel}>Cancel</button>}
