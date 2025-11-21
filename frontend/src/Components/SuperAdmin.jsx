@@ -90,7 +90,6 @@ export default function SuperAdmin() {
     <div className="superadmin">
       <h2>Products</h2>
 
-      {/* Reusable ProductForm used for Add and Edit */}
       {editingId ? (
         <ProductForm
           initial={editingProduct || {}}

@@ -82,7 +82,7 @@ export default function Admin() {
       if (file) formData.append("image", file);
 
       if (isEditing && form.id) {
-        // Update existing request
+        // Update existing request (backend should accept this route)
         await fetch(`${API_BASE}/admin/request/update/${form.id}`, {
           method: "POST",
           body: formData,
@@ -135,7 +135,7 @@ export default function Admin() {
               <td>{r.product_data?.name || "-"}</td>
               <td>{r.request_type}</td>
               <td className={`status-${r.status}`}>{r.status}</td>
-              <td>{new Date(r.created_at).toLocaleString()}</td>
+              <td>{r.created_at ? new Date(r.created_at).toLocaleString() : "-"}</td>
 
               <td>
                 {r.status === "pending" && (

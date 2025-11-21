@@ -11,19 +11,22 @@ import superAdminRoutes from "./routes/superadmin.js";
 
 dotenv.config();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 const app = express();
 
 // CORS
+const allowedOrigins = ["http://localhost:5173", process.env.FRONTEND_URL].filter(Boolean);
 app.use(
   cors({
-    origin: ["http://localhost:5173", process.env.FRONTEND_URL],
+    origin: allowedOrigins.length ? allowedOrigins : "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
 
+// Body parsers (JSON + urlencoded) must run before routers
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Super Admin routes
 app.use("/admin", adminRequestsRoutes);
