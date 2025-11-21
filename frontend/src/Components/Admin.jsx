@@ -1,10 +1,10 @@
 // src/Components/Admin.jsx
-import React, { useState, useEffect } from "react";
-import "../styles/Admin.css";
+import React, { useEffect, useState } from "react";
+import ProductForm from "./ProductForm";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
-function Admin() {
+export default function Admin() {
   const [requests, setRequests] = useState([]);
   const [form, setForm] = useState({
     id: "",
@@ -15,7 +15,6 @@ function Admin() {
   });
 
   const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   // Admin name from localStorage or fallback
   const adminName = localStorage.getItem("adminName") || "admin";
@@ -35,57 +34,6 @@ function Admin() {
     fetchRequests();
   }, []);
 
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-
-  const handleFileChange = (e) =>
-    setForm((prev) => ({ ...prev, image: e.target.files[0] }));
-
-  /** Submit Add or Update request */
-  const submitRequest = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("admin_name", adminName);
-      formData.append("name", form.name);
-      formData.append("price", form.price);
-      formData.append("category", form.category);
-      if (form.image) formData.append("image", form.image);
-
-      let url = "";
-
-      if (isEditing) {
-        // UPDATE Request
-        url = `${API_BASE}/admin/request/update/${form.id}`;
-      } else {
-        // ADD Request
-        url = `${API_BASE}/admin/request/add`;
-      }
-
-      await fetch(url, {
-        method: "POST",
-        body: formData,
-      });
-
-      // Reset form
-      setForm({
-        id: "",
-        name: "",
-        price: "",
-        category: "",
-        image: null,
-      });
-      setIsEditing(false);
-      fetchRequests();
-    } catch (err) {
-      console.error("Submit request error", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   /** Prepare update request editing */
   const prepareEdit = (req) => {
     const pd = req.product_data || {};
@@ -102,7 +50,13 @@ function Admin() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  /** Cancel request */
+  /** Cancel request edit */
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setForm({ id: "", name: "", price: "", category: "", image: null });
+  };
+
+  /** Cancel/withdraw request */
   const withdrawRequest = async (id) => {
     try {
       await fetch(`${API_BASE}/admin/request/cancel/${id}`, {
@@ -117,67 +71,47 @@ function Admin() {
     }
   };
 
+  /** Unified submit handler for ProductForm (add or update) */
+  const handleSubmit = async (values, file) => {
+    try {
+      const formData = new FormData();
+      formData.append("admin_name", adminName);
+      formData.append("name", values.name);
+      formData.append("price", values.price);
+      formData.append("category", values.category);
+      if (file) formData.append("image", file);
+
+      if (isEditing && form.id) {
+        // Update existing request
+        await fetch(`${API_BASE}/admin/request/update/${form.id}`, {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        // Create new request
+        await fetch(`${API_BASE}/admin/request/add`, {
+          method: "POST",
+          body: formData,
+        });
+      }
+
+      // Reset form / state
+      cancelEdit();
+      fetchRequests();
+    } catch (err) {
+      console.error("Submit request error", err);
+    }
+  };
+
   return (
-    <div className="admin-container">
-      <h1 className="admin-title">Admin Dashboard — Product Requests</h1>
-
-      {/* --- FORM --- */}
-      <form onSubmit={submitRequest} className="product-form two-column-form">
-        <div>
-          <input
-            type="text"
-            name="name"
-            placeholder="Product Name"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
-
-          <input
-            type="number"
-            name="price"
-            placeholder="Price"
-            value={form.price}
-            onChange={handleChange}
-            required
-          />
-
-          <select
-            name="category"
-            value={form.category}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select Category</option>
-            <option value="antidepressants">Antidepressants</option>
-            <option value="antiAnxiety">Anti-Anxiety</option>
-            <option value="moodStabilizers">Mood Stabilizers</option>
-            <option value="antipsychotics">Antipsychotics</option>
-            <option value="sleepRelaxationAids">Sleep & Relaxation Aids</option>
-            <option value="cognitiveFocusEnhancers">
-              Cognitive & Focus Enhancers
-            </option>
-            <option value="naturalHerbalMentalWellness">
-              Natural & Herbal Mental Wellness
-            </option>
-            <option value="vitaminsNutritionalSupport">
-              Vitamins & Nutritional Support
-            </option>
-          </select>
-        </div>
-
-        <div className="file-input-wrapper">
-          <input type="file" onChange={handleFileChange} />
-        </div>
-
-        <button className="form-button primary" disabled={loading}>
-          {loading
-            ? "Submitting..."
-            : isEditing
-            ? "Submit Update Request"
-            : "Submit Add Request"}
-        </button>
-      </form>
+    <div className="admin">
+      <h2>Submit Product Request</h2>
+      <ProductForm
+        submitLabel={isEditing ? "Update Request" : "Send Request"}
+        onSubmit={handleSubmit}
+        initial={isEditing ? form : {}}
+        onCancel={isEditing ? cancelEdit : undefined}
+      />
 
       {/* --- REQUEST LIST --- */}
       <h2>Your Requests</h2>
@@ -232,5 +166,3 @@ function Admin() {
     </div>
   );
 }
-
-export default Admin;

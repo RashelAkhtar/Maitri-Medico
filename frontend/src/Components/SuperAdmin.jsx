@@ -1,16 +1,14 @@
 // src/Components/SuperAdmin.jsx
 import React, { useEffect, useState } from "react";
+import ProductForm from "./ProductForm";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 export default function SuperAdmin() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // add / edit form state
-  const [form, setForm] = useState({ name: "", price: "", category: "" });
-  const [file, setFile] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [editingProduct, setEditingProduct] = useState(null);
 
   useEffect(() => {
     fetchProducts();
@@ -29,15 +27,11 @@ export default function SuperAdmin() {
     }
   };
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleFile = (e) => setFile(e.target.files[0]);
-
-  const submitAdd = async (e) => {
-    e.preventDefault();
+  const handleAdd = async (values, file) => {
     const fd = new FormData();
-    fd.append("name", form.name);
-    fd.append("price", form.price);
-    fd.append("category", form.category);
+    fd.append("name", values.name);
+    fd.append("price", values.price);
+    fd.append("category", values.category);
     if (file) fd.append("image", file);
 
     try {
@@ -45,27 +39,18 @@ export default function SuperAdmin() {
         method: "POST",
         body: fd,
       });
-      setForm({ name: "", price: "", category: "" });
-      setFile(null);
       fetchProducts();
     } catch (err) {
       console.error("Add failed", err);
     }
   };
 
-  const startEdit = (p) => {
-    setEditingId(p.id);
-    setForm({ name: p.name || "", price: String(p.price || ""), category: p.category || "" });
-    setFile(null);
-  };
-
-  const submitUpdate = async (e) => {
-    e.preventDefault();
+  const handleUpdate = async (values, file) => {
     if (!editingId) return;
     const fd = new FormData();
-    fd.append("name", form.name);
-    fd.append("price", form.price);
-    fd.append("category", form.category);
+    fd.append("name", values.name);
+    fd.append("price", values.price);
+    fd.append("category", values.category);
     if (file) fd.append("image", file);
 
     try {
@@ -74,12 +59,21 @@ export default function SuperAdmin() {
         body: fd,
       });
       setEditingId(null);
-      setForm({ name: "", price: "", category: "" });
-      setFile(null);
+      setEditingProduct(null);
       fetchProducts();
     } catch (err) {
       console.error("Update failed", err);
     }
+  };
+
+  const startEdit = (p) => {
+    setEditingId(p.id);
+    setEditingProduct(p);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingProduct(null);
   };
 
   const deleteProduct = async (id) => {
@@ -92,25 +86,21 @@ export default function SuperAdmin() {
     }
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setForm({ name: "", price: "", category: "" });
-    setFile(null);
-  };
-
   return (
     <div className="superadmin">
       <h2>Products</h2>
 
-      {/* Add / Edit form */}
-      <form onSubmit={editingId ? submitUpdate : submitAdd} style={{ marginBottom: 20 }}>
-        <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required />
-        <input name="price" placeholder="Price" value={form.price} onChange={handleChange} required />
-        <input name="category" placeholder="Category" value={form.category} onChange={handleChange} required />
-        <input type="file" accept="image/*" onChange={handleFile} />
-        <button type="submit">{editingId ? "Update" : "Add"}</button>
-        {editingId && <button type="button" onClick={cancelEdit}>Cancel</button>}
-      </form>
+      {/* Reusable ProductForm used for Add and Edit */}
+      {editingId ? (
+        <ProductForm
+          initial={editingProduct || {}}
+          submitLabel="Update"
+          onSubmit={handleUpdate}
+          onCancel={cancelEdit}
+        />
+      ) : (
+        <ProductForm submitLabel="Add" onSubmit={handleAdd} />
+      )}
 
       {loading ? <div>Loading...</div> : (
         <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -142,7 +132,6 @@ export default function SuperAdmin() {
           </tbody>
         </table>
       )}
-
     </div>
   );
 }
