@@ -1,173 +1,114 @@
+// src/Components/Admin.jsx
 import React, { useState, useEffect } from "react";
 import "../styles/Admin.css";
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
 function Admin() {
-  const [products, setProducts] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [form, setForm] = useState({
     id: "",
     name: "",
     price: "",
-    image: "",
+    image: null,
     category: "",
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showDeletePopup, setShowDeletePopup] = useState(false);
-  const [productToDelete, setProductToDelete] = useState({ id: "", name: "" });
 
-  // Fetch all products
-  const fetchProducts = async () => {
+  // admin name from your auth or localStorage (fallback)
+  const adminName = localStorage.getItem("adminName") || "admin";
+
+  const fetchRequests = async () => {
     try {
-      const res = await fetch(`${API_BASE}/products`);
-      if (!res.ok) throw new Error("Failed to fetch products");
+      const res = await fetch(`${API_BASE}/requests?admin_name=${encodeURIComponent(adminName)}`);
       const data = await res.json();
-      setProducts(data.products || []);
+      // data.requests is expected
+      setRequests(data.requests || []);
     } catch (error) {
-      console.error("Error fetching products", error);
+      console.error("Error fetching requests", error);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchRequests();
   }, []);
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
-  };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e) =>
     setForm({ ...form, image: e.target.files[0] });
-  };
 
-  const addProduct = async (e) => {
+  // Submit new add request
+  const submitRequest = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const formData = new FormData();
+      formData.append("admin_name", adminName);
+      formData.append("request_type", isEditing ? "update" : "add");
+      if (isEditing && form.id) formData.append("product_id", form.id);
       formData.append("name", form.name);
       formData.append("price", form.price);
       formData.append("category", form.category);
-      formData.append("image", form.image);
+      if (form.image) formData.append("image", form.image);
 
-      const response = await fetch(`${API_BASE}/products`, {
+      // POST to /requests (your backend request.js POST /)
+      const url = `${API_BASE}/requests`;
+      await fetch(url, {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error("Failed to add product");
-      setForm({ id: "", name: "", price: "", image: "", category: "" });
-      fetchProducts();
-    } catch (err) {
-      console.error("Error adding product", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const updateProduct = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("name", form.name);
-      formData.append("price", form.price);
-      formData.append("category", form.category);
-      if (form.image instanceof File) {
-        formData.append("image", form.image);
-      }
-
-      const response = await fetch(`${API_BASE}/products/${form.id}`, {
-        method: "PUT",
-        body: formData,
-      });
-      if (!response.ok) throw new Error("Failed to update product");
-      setForm({ id: "", name: "", price: "", image: "", category: "" });
+      setForm({ id: "", name: "", price: "", image: null, category: "" });
       setIsEditing(false);
-      fetchProducts();
+      fetchRequests();
     } catch (err) {
-      console.error("Error updating product", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const confirmDelete = (id, name) => {
-    setProductToDelete({ id, name });
-    setShowDeletePopup(true);
-  };
-
-  const cancelDelete = () => {
-    setShowDeletePopup(false);
-    setProductToDelete({ id: "", name: "" });
-  };
-
-  const deleteProduct = async () => {
-    try {
-      await fetch(`${API_BASE}/products/${productToDelete.id}`, {
-        method: "DELETE",
-      });
-      fetchProducts();
-    } catch (err) {
-      console.error("Error deleting product", err);
-    } finally {
-      setShowDeletePopup(false);
-      setProductToDelete({ id: "", name: "" });
-    }
-  };
-
-  const startEdit = (product) => {
-    setForm(product);
+  const prepareEdit = (r) => {
+    // r.product_data has stored values
     setIsEditing(true);
+    setForm({
+      id: r.product_id || r.product_data?.id || "",
+      name: r.product_data?.name || "",
+      price: r.product_data?.price || "",
+      image: null,
+      category: r.product_data?.category || "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const withdrawRequest = async (id) => {
+    try {
+      await fetch(`${API_BASE}/requests/cancel/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_name: adminName }), // backend should verify owner
+      });
+      fetchRequests();
+    } catch (err) {
+      console.error("Error cancelling request", err);
+    }
   };
 
   return (
     <div className="admin-container">
-      <h1 className="admin-title">🧠 Maitri Admin Dashboard</h1>
-      <p className="admin-subtitle">
-        Manage your mental wellness products with ease 💜
-      </p>
+      <h1 className="admin-title">Admin: Product Requests</h1>
 
-      {showDeletePopup && (
-        <div className="popup-overlay">
-          <div className="confirmation-popup">
-            <div className="popup-icon">🗑️</div>
-            <h3>Delete Product</h3>
-            <p>Are you sure you want to delete "{productToDelete.name}"?</p>
-            <p className="warning-text">This action cannot be undone.</p>
-            <div className="popup-actions">
-              <button className="cancel-btn" onClick={cancelDelete}>
-                Cancel
-              </button>
-              <button className="confirm-delete-btn" onClick={deleteProduct}>
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <form
-        onSubmit={isEditing ? updateProduct : addProduct}
-        className="product-form two-column-form"
-      >
-        <div className="form-left">
-          {isEditing && (
-            <input
-              type="text"
-              name="id"
-              value={form.id}
-              disabled
-              className="form-input id-input"
-            />
-          )}
+      <form onSubmit={submitRequest} className="product-form two-column-form">
+        <div>
           <input
             type="text"
             name="name"
             placeholder="Product Name"
             value={form.name}
             onChange={handleChange}
-            className="form-input"
             required
           />
           <input
@@ -176,16 +117,12 @@ function Admin() {
             placeholder="Price"
             value={form.price}
             onChange={handleChange}
-            className="form-input"
             required
-            min="0"
-            step="0.01"
           />
           <select
             name="category"
-            value={form.category || ""}
+            value={form.category}
             onChange={handleChange}
-            className="form-input"
             required
           >
             <option value="">Select Category</option>
@@ -194,127 +131,63 @@ function Admin() {
             <option value="moodStabilizers">Mood Stabilizers</option>
             <option value="antipsychotics">Antipsychotics</option>
             <option value="sleepRelaxationAids">Sleep & Relaxation Aids</option>
-            <option value="cognitiveFocusEnhancers">
-              Cognitive & Focus Enhancers
-            </option>
-            <option value="naturalHerbalMentalWellness">
-              Natural & Herbal Mental Wellness
-            </option>
-            <option value="vitaminsNutritionalSupport">
-              Vitamins & Nutritional Support
-            </option>
+            <option value="cognitiveFocusEnhancers">Cognitive & Focus Enhancers</option>
+            <option value="naturalHerbalMentalWellness">Natural & Herbal Mental Wellness</option>
+            <option value="vitaminsNutritionalSupport">Vitamins & Nutritional Support</option>
           </select>
         </div>
 
-        <div className="form-right">
-          <div className="file-input-wrapper">
-            <input
-              type="file"
-              name="image"
-              placeholder="image/*"
-              onChange={handleFileChange}
-              className="form-input"
-              required
-            />
-            {form.image && (
-              <div className="current-image">
-                <p className="current-image-label">
-                  {form.image instanceof File
-                    ? "New Image Preview:"
-                    : "Current Image:"}
-                </p>
-                <img
-                  src={
-                    form.image instanceof File
-                      ? URL.createObjectURL(form.image)
-                      : form.image
-                  }
-                  alt={form.name || "Product"}
-                  className="current-image-preview"
-                />
-              </div>
-            )}
-          </div>
+        <div className="file-input-wrapper">
+          <input type="file" onChange={handleFileChange} />
         </div>
 
-        <div className="form-actions">
-          <button
-            type="submit"
-            className="form-button primary"
-            disabled={loading}
-          >
-            {loading ? "Saving..." : isEditing ? "Update" : "Add"} Product
-          </button>
-          {isEditing && (
-            <button
-              type="button"
-              onClick={() => {
-                setIsEditing(false);
-                setForm({
-                  id: "",
-                  name: "",
-                  price: "",
-                  image: "",
-                  category: "",
-                });
-              }}
-              className="form-button secondary"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
+        <button className="form-button primary" disabled={loading}>
+          {isEditing ? "Submit Update Request" : "Submit Add Request"}
+        </button>
       </form>
 
-      <div className="products-table-container">
-        <table className="products-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Price</th>
-              <th>Category</th>
-              <th>Image</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.length > 0 ? (
-              products.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.id}</td>
-                  <td>{p.name}</td>
-                  <td>₹{parseFloat(p.price).toFixed(2)}</td>
-                  <td className="category-cell">{p.category}</td>
-                  <td className="image-cell">
-                    <img src={p.image} alt={p.name} />
-                  </td>
-                  <td className="actions-cell">
-                    <button
-                      onClick={() => startEdit(p)}
-                      className="action-button edit"
-                    >
+      <h2>Your Requests</h2>
+
+      <table className="products-table">
+        <thead>
+          <tr>
+            <th>Req ID</th>
+            <th>Name</th>
+            <th>Action</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Withdraw / Edit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {requests.map((r) => (
+            <tr key={r.id}>
+              <td>{r.id}</td>
+              <td>{r.product_data?.name || "-"}</td>
+              <td>{r.request_type}</td>
+              <td className={`status-${r.status.toLowerCase()}`}>{r.status}</td>
+              <td>{new Date(r.created_at).toLocaleString()}</td>
+              <td>
+                {r.status === "pending" && (
+                  <>
+                    <button className="cancel-btn" onClick={() => withdrawRequest(r.id)}>
+                      Cancel
+                    </button>
+                    <button className="edit-btn" onClick={() => prepareEdit(r)}>
                       Edit
                     </button>
-                    <button
-                      onClick={() => confirmDelete(p.id, p.name)}
-                      className="action-button delete"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="6" className="no-products">
-                  No products found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                  </>
+                )}
+              </td>
+            </tr>
+          ))}
+          {requests.length === 0 && (
+            <tr>
+              <td colSpan="6">No requests yet</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
