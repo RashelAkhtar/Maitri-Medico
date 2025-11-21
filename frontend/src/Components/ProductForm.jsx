@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "../styles/ProductForm.css";
 
 const CATEGORIES = [
   { value: "antiAnxiety", label: "Anti Anxiety" },
