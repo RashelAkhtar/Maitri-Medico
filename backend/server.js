@@ -5,11 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
 import dotenv from "dotenv";
 import { upload, cloudinary } from "./cloudinaryConfig.js";
-import adminRequestsRoutes from "./routes/adminRequests.js";
+import adminRequestsRoutes from "./routes/requests.js";
 import superAdminRoutes from "./routes/superAdmin.js";
-
-
-
 
 
 dotenv.config();
