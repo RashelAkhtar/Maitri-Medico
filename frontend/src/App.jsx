@@ -5,6 +5,7 @@ import ProductShowcase from "./Components/ProductShowcasePage";
 import Navbar from "./Components/Navbar";
 import Cart from "./Components/Cart";
 import Admin from "./Components/Admin";
+import SuperAdmin from "./Components/SuperAdmin";
 
 // Categories
 import AntiAnxiety from "./Categories/Anti-Anxiety";
@@ -26,6 +27,7 @@ function App() {
           <Route path="/products" element={<ProductShowcase />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/superadmin" element={<SuperAdmin />} />
 
           {/* Categories Routes */}
           <Route path="/products/antiAnxiety" element={<AntiAnxiety />} />
